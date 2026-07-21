@@ -81,3 +81,132 @@ try {
     next(error);
     }
 };
+
+export const updateSubscription = async (req, res, next) => {
+try {
+    const { id } = req.params;
+
+    const subscription = await Subscription.findById(id);
+
+    if (!subscription) {
+        const error = new Error('Subscription not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    if (subscription.user.toString() !== req.user._id.toString()) {
+    const error = new Error('You are not authorized to update this subscription');
+    error.statusCode = 403;
+    throw error;
+    }
+
+    const restrictedFields = ['startDate', 'renewalDate', 'status', 'user'];
+    const bodyKeys = Object.keys(req.body);
+
+    const attemptedRestrictedFields = bodyKeys.filter((key) =>
+    restrictedFields.includes(key)
+    );
+    const allowedKeys = bodyKeys.filter(
+    (key) => !restrictedFields.includes(key)
+    );
+
+    if (attemptedRestrictedFields.length > 0 && allowedKeys.length === 0) {
+    const error = new Error(
+        `Updating restricted fields (${attemptedRestrictedFields.join(
+        ', '
+        )}) is not allowed via this route.`
+    );
+    error.statusCode = 400;
+    throw error;
+    }
+
+    const updates = {};
+    allowedKeys.forEach((key) => {
+    updates[key] = req.body[key];
+    });
+
+    Object.assign(subscription, updates);
+    const updatedSubscription = await subscription.save();
+
+    let responseMessage = 'Subscription updated successfully';
+    if (attemptedRestrictedFields.length > 0) {
+        responseMessage += `. Note: Restricted fields (${attemptedRestrictedFields.join(
+        ', '
+        )}) were ignored and not updated.`;
+    }
+
+    res.status(200).json({
+        success: true,
+        message: responseMessage,
+        data: updatedSubscription,
+    });
+    } catch (error) {
+    next(error);
+    }
+};
+
+export const cancelSubscription = async (req, res, next) => {
+try {
+    const { id } = req.params;
+
+    const subscription = await Subscription.findById(id);
+
+    if (!subscription) {
+        const error = new Error('Subscription not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    if (subscription.user.toString() !== req.user._id.toString()) {
+        const error = new Error('You are not authorized to cancel this subscription');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    if (subscription.status !== 'active') {
+        const error = new Error(`Cannot cancel a subscription with status: ${subscription.status}.`);
+        error.statusCode = 400;
+        throw error;
+    }
+
+    subscription.status = 'cancelled';
+    await subscription.save();
+
+    res.status(200).json({
+        success: true,
+        message: 'Subscription cancelled successfully',
+        data: subscription,
+    });
+    } catch (error) {
+    next(error);
+    }
+};
+
+export const deleteSubscription = async (req, res, next) => {
+try {
+    const { id } = req.params;
+
+    const subscription = await Subscription.findById(id);
+
+    if (!subscription) {
+        const error = new Error('Subscription not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    if (subscription.user.toString() !== req.user._id.toString()) {
+        const error = new Error('You are not authorized to delete this subscription');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    await Subscription.findByIdAndDelete(id);
+
+    res.status(200).json({
+        success: true,
+        message: 'Subscription deleted successfully',
+    });
+    } catch (error) {
+    next(error);
+    }
+};
