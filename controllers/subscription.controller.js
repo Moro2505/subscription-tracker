@@ -57,7 +57,6 @@ try {
     }
 };
 
-
 export const getUpcomingRenewals = async (req, res, next) => {
 try {
     const startDate = dayjs().toDate();
@@ -205,6 +204,60 @@ try {
     res.status(200).json({
         success: true,
         message: 'Subscription deleted successfully',
+    });
+    } catch (error) {
+    next(error);
+    }
+};
+
+export const renewSubscription = async (req, res, next) => {
+try {
+    const { id } = req.params;
+    const { frequency, paymentMethod } = req.body;
+
+    const subscription = await Subscription.findById(id);
+
+    if (!subscription) {
+        const error = new Error('Subscription not found');
+        error.statusCode = 404;
+        throw error;
+    }
+
+    if (subscription.user.toString() !== req.user._id.toString()) {
+        const error = new Error('You are not authorized to renew this subscription');
+        error.statusCode = 403;
+        throw error;
+    }
+
+    if (frequency) subscription.frequency = frequency;
+    if (paymentMethod) subscription.paymentMethod = paymentMethod;
+
+    const freqMap = {
+        daily: 'day',
+        weekly: 'week',
+        monthly: 'month',
+        yearly: 'year',
+    };
+    const unit = freqMap[subscription.frequency] || 'month';
+
+    if (subscription.status === 'expired' || subscription.status === 'cancelled') {
+        subscription.startDate = new Date();
+        subscription.renewalDate = dayjs(subscription.startDate).add(1, unit).toDate();
+        subscription.status = 'active';
+    } else if (subscription.status === 'active') {
+        const baseDate = subscription.renewalDate && dayjs(subscription.renewalDate).isAfter(dayjs())
+        ? subscription.renewalDate
+        : new Date();
+
+        subscription.renewalDate = dayjs(baseDate).add(1, unit).toDate();
+    }
+
+    const updatedSubscription = await subscription.save();
+
+    res.status(200).json({
+        success: true,
+        message: 'Subscription renewed successfully',
+        data: updatedSubscription,
     });
     } catch (error) {
     next(error);

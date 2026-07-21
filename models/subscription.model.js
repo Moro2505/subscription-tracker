@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import dayjs from 'dayjs';
 
 const subscriptionSchema = new mongoose.Schema({
     name : {
@@ -63,21 +64,21 @@ const subscriptionSchema = new mongoose.Schema({
 },{timestamps :true})
 
 subscriptionSchema.pre('save', function () {
-    const renewalPeriods = {
-        daily: 1,
-        weekly: 7,
-        monthly: 30,
-        yearly: 365,
-    };
-    
-    if (!this.renewalDate) {
-        this.renewalDate = new Date(this.startDate);
-        this.renewalDate.setDate(this.renewalDate.getDate() + renewalPeriods[this.frequency]);
-    }
+const freqMap = {
+    daily: 'day',
+    weekly: 'week',
+    monthly: 'month',
+    yearly: 'year',
+};
 
-    if (this.renewalDate < new Date()) {
+if (!this.renewalDate) {
+    const unit = freqMap[this.frequency] || 'month';
+    this.renewalDate = dayjs(this.startDate).add(1, unit).toDate();
+}
+
+if (dayjs(this.renewalDate).isBefore(dayjs())) {
         this.status = 'expired';
-    }
+}
 });
 
 const Subscription = mongoose.model('Subscription', subscriptionSchema);
