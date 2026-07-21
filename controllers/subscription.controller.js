@@ -30,17 +30,17 @@ workflowRunId: workflowRunId
 }
 }
 
-export const getUserSubscriptions = async (req, res, next) => {
+export const getSubscriptions = async (req, res, next) => {
 try {
-    if (req.user.id !== req.params.id) {
-    const error = new Error('You are not the owner of this account');
-    error.status = 401;
-    throw error;
+    const query = { user: req.user._id };
+
+    if (req.query.status) {
+        query.status = req.query.status;
     }
 
-    const subscriptions = await Subscription.find({ user: req.params.id });
+    const subscriptions = await Subscription.find(query);
 
-    res.status(200).json({ success: true, data: subscriptions });
+    res.status(200).json({ success: true, count: subscriptions.length , data: subscriptions });
 } catch (e) {
     next(e);
 }
