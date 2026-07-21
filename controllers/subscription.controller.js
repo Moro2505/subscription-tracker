@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import Subscription from '../models/subscription.model.js';
 import { workflowClient } from '../config/upstash.js';
 import { SERVER_URL } from '../config/env.js';
@@ -32,16 +33,51 @@ workflowRunId: workflowRunId
 
 export const getSubscriptions = async (req, res, next) => {
 try {
-    const query = { user: req.user._id };
+    const { status, search } = req.query;
 
-    if (req.query.status) {
-        query.status = req.query.status;
+    const queryFilter = { user: req.user._id };
+
+    if (status) {
+        queryFilter.status = status;
     }
 
-    const subscriptions = await Subscription.find(query);
+    if (search) {
+        queryFilter.name = { $regex: search, $options: 'i' };
+    }
 
-    res.status(200).json({ success: true, count: subscriptions.length , data: subscriptions });
-} catch (e) {
-    next(e);
-}
+    const subscriptions = await Subscription.find(queryFilter).sort({ createdAt: -1 });
+
+    res.status(200).json({
+        success: true,
+        count: subscriptions.length,
+        data: subscriptions,
+    });
+    } catch (error) {
+    next(error);
+    }
+};
+
+
+export const getUpcomingRenewals = async (req, res, next) => {
+try {
+    const startDate = dayjs().toDate();
+    const endDate = dayjs().add(7, 'day').toDate();
+
+    const upcomingSubscriptions = await Subscription.find({
+        user: req.user._id,
+        status: 'active',
+        renewalDate: {
+        $gte: startDate,
+        $lte: endDate,
+        },
+    }).sort({ renewalDate: 1 });
+
+    res.status(200).json({
+        success: true,
+        count: upcomingSubscriptions.length,
+        data: upcomingSubscriptions,
+    });
+    } catch (error) {
+    next(error);
+    }
 };
