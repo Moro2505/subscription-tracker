@@ -2,6 +2,11 @@ import aj from "../config/arcjet.js";
 
 const arcjetMiddleware = async (req, res, next) => {
 try {
+
+    if (req.originalUrl.startsWith('/api/v1/workflows')) {
+        return next();
+    }
+
     const decision = await aj.protect( req  , { requested : 5 });
     if(decision.isDenied()) {
         if(decision.reason.isRateLimit()) return res.status(429).json({ error: 'Rate limit exceeded' });
