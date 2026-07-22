@@ -8,28 +8,29 @@ import { sendReminderEmail } from '../utils/send-email.js';
 const REMINDERS = [7, 5, 2, 1];
 
 export const sendReminders = serve(async (context) => {
-const { subscriptionId } = context.requestPayload;
+    const { subscriptionId } = context.requestPayload;
 
-const subscription = await fetchSubscription(context, subscriptionId);
+    const subscription = await fetchSubscription(context, subscriptionId);
 
-if (!subscription || subscription.status !== 'active') return;
+    if (!subscription || subscription.status === 'cancelled') return;
 
-const renewalDate = dayjs(subscription.renewalDate);
-
-if (renewalDate.isBefore(dayjs())) {
-    console.log(`Renewal date has passed for subscription ${subscriptionId}. Stopping workflow.`);
-    return;
-} 
+    const renewalDate = dayjs(subscription.renewalDate);
 
 for (const daysBefore of REMINDERS) {
     const reminderDate = renewalDate.subtract(daysBefore, 'day');
 
     if (reminderDate.isAfter(dayjs())) {
-    await sleepUntilReminder(context, `${daysBefore} days before Reminder`, reminderDate);
+        await sleepUntilReminder(context, `${daysBefore} days before reminder`, reminderDate);
     }
     if (dayjs().isSame(reminderDate, 'day')) {
-    await triggerReminder(context, `${daysBefore} days before reminder`, subscription);
-}}
+        await triggerReminder(context, `${daysBefore} days before reminder`, subscription);
+    }
+}
+    if (renewalDate.isAfter(dayjs())) {
+    await sleepUntilReminder(context, 'Subscription Expiration Date', renewalDate);
+    }
+
+    await triggerReminder(context, 'expired', subscription);
 });
 
 const fetchSubscription = async (context, subscriptionId) => {
@@ -44,13 +45,17 @@ await context.sleepUntil(label, date.toDate());
 };
 
 const triggerReminder = async (context, label, subscription) => {
-return await context.run(label, async () => {
+    return await context.run(label, async () => {
     console.log(`Triggering ${label} reminder`);
 
     await sendReminderEmail({
-    to: subscription.user.email,
-    type: label,
-    subscription: subscription, 
+        to: subscription.user.email,
+        type: label,
+        subscription: subscription,
     });
+
+    if (label === 'expired') {
+        await Subscription.findByIdAndUpdate(subscription._id, { status: 'expired' });
+    }
 });
 };
