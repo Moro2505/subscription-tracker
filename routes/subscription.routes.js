@@ -12,12 +12,14 @@ import { createSubscription ,
 
 const subscriptionRouter = Router();
 
-subscriptionRouter.post('/', authorize , createSubscription );
-subscriptionRouter.get('/', authorize , getSubscriptions);
-subscriptionRouter.get('/upcoming-renewals', authorize , getUpcomingRenewals);
-subscriptionRouter.put('/:id', authorize , updateSubscription);
-subscriptionRouter.put('/:id/cancel', authorize , cancelSubscription);
-subscriptionRouter.put('/:id/renew', authorize, renewSubscription);
-subscriptionRouter.delete('/:id', authorize , deleteSubscription);
+subscriptionRouter.use(authorize);
+
+subscriptionRouter.post('/', createSubscription );
+subscriptionRouter.get('/', getSubscriptions);
+subscriptionRouter.get('/upcoming-renewals', getUpcomingRenewals);
+subscriptionRouter.put('/:id', updateSubscription);
+subscriptionRouter.put('/:id/cancel', cancelSubscription);
+subscriptionRouter.put('/:id/renew', renewSubscription);
+subscriptionRouter.delete('/:id', deleteSubscription);
 
 export default subscriptionRouter;

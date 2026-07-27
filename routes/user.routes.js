@@ -6,9 +6,11 @@ import { getUser , updateUser , changePassword , deleteUser } from '../controlle
 
 const userRouter = Router();
 
-userRouter.get('/:id', authorize , getUser );
-userRouter.put('/:id/change-name', authorize , updateUser );
-userRouter.put('/:id/change-password', authorize , changePassword );
-userRouter.delete('/:id', authorize , deleteUser );
+userRouter.use(authorize);
+
+userRouter.get('/:id', getUser );
+userRouter.put('/:id/change-name', updateUser );
+userRouter.put('/:id/change-password', changePassword );
+userRouter.delete('/:id', deleteUser );
 
 export default userRouter;
