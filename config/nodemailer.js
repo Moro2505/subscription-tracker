@@ -1,8 +1,8 @@
 import nodemailer from 'nodemailer';
 
-import { EMAIL_PASSWORD } from './env.js';
+import { EMAIL_PASSWORD, EMAIL_USER } from './env.js';
 
-export const accountEmail = 'test@gmail.com' ;
+export const accountEmail = EMAIL_USER ;
 
 const transporter = nodemailer.createTransport({
 service: 'gmail',
